@@ -12,3 +12,4 @@ void zero_array(double *a, int m);
 
 void diag(int, int, double **, double *, int , double **, double);
 void eivout(double**, double *, int, int, FILE *);
+//C_DSYEV(char jobz, char uplo, int n, double *a, int lda, double *w, double *work, int lwork)

@@ -74,7 +74,6 @@ int main(int argc, char *argv[])
 
   matrix_delete(A);
   matrix_delete(B);
-  matrix_delete(C);
 
   delete [] w;
 

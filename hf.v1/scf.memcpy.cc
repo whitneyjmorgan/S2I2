@@ -8,6 +8,7 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <cmath>
 #include <iostream>
 #include <fstream>
@@ -107,10 +108,10 @@ int main(int argc, char *argv[]) {
     int info;
     info = C_DSYEV('v', 'u', nao, S[0], nao, evals, evecs[0], nao*nao);
     printf("info = %d\n",info);
-//    memcpy(evecs[0],S[0],nao*nao*sizeof(double));
-    for (int i = 0; i < nao; i++) 
-      for (int j = 0; j < nao; j++) 
-        evecs[j][i] = S[i][j]; 
+    memcpy(evecs[0],S[0],nao*nao*sizeof(double));
+//    for (int i = 0; i < nao; i++) 
+//      for (int j = 0; j < nao; j++) 
+//        evecs[j][i] = S[i][j]; 
     for (int i = 0; i < nao; i++) {
       for (int j = 0; j < nao; j++) {
         S[i][j] = 0.0;
@@ -121,9 +122,9 @@ int main(int argc, char *argv[]) {
     X = init_matrix(nao, nao);
 //    mmult(evecs, 0, S, 0, TMP, nao, nao, nao);
 //if you use memcpy you need to make this t, n and the next n, n
-    C_DGEMM('n', 'n', nao, nao, nao, 1.0, evecs[0], nao, S[0], nao, 0.0, TMP[0], nao);
+    C_DGEMM('t', 'n', nao, nao, nao, 1.0, evecs[0], nao, S[0], nao, 0.0, TMP[0], nao);
 //    mmult(TMP, 0, evecs, 1, X, nao, nao, nao);
-    C_DGEMM('n', 't', nao, nao, nao, 1.0, TMP[0], nao, evecs[0], nao, 0.0, X[0], nao);
+    C_DGEMM('n', 'n', nao, nao, nao, 1.0, TMP[0], nao, evecs[0], nao, 0.0, X[0], nao);
     delete_matrix(TMP);
     delete[] evals;
     delete_matrix(evecs);
@@ -150,10 +151,17 @@ int main(int argc, char *argv[]) {
     print_mat(Fp, nao, nao, stdout);
 
     eps = init_array(nao);
-    diag(nao, nao, Fp, eps, 1, TMP, 1e-13);
+//    diag(nao, nao, Fp, eps, 1, TMP, 1e-13);
+    info = C_DSYEV('v', 'u', nao, Fp[0], nao, eps, TMP[0], nao*nao);
+    printf("info = %d\n",info);
+    memcpy(TMP[0],Fp[0],nao*nao*sizeof(double));
     C = init_matrix(nao, nao);
 //    mmult(X, 0, TMP, 0, C, nao, nao, nao);
-    C_DGEMM('n', 'n', nao, nao, nao, 1.0, X[0], nao, TMP[0], nao, 0.0, C[0], nao);
+    C_DGEMM('n', 't', nao, nao, nao, 1.0, X[0], nao, TMP[0], nao, 0.0, C[0], nao);
+/*Is the second term 't' wrong and should it be 'n'?
+  If it is wrong, why does it produce the same answer?
+  If it isn't wrong, why not, what is going on with the matrix??
+*/
     printf("\n\tInitial C Matrix:\n");
     print_mat(C, nao, nao, stdout);
 
@@ -228,11 +236,14 @@ int main(int argc, char *argv[]) {
 
       zero_matrix(TMP, nao, nao);
       zero_array(eps, nao);
-      diag(nao, nao, Fp, eps, 1, TMP, 1e-13);
+//      diag(nao, nao, Fp, eps, 1, TMP, 1e-13);
+      info = C_DSYEV('v', 'u', nao, Fp[0], nao, eps, TMP[0], nao*nao);
+      printf("info = %d\n",info);
+      memcpy(TMP[0],Fp[0],nao*nao*sizeof(double));
 
       zero_matrix(C, nao, nao);
 //      mmult(X, 0, TMP, 0, C, nao, nao, nao);
-      C_DGEMM('n', 'n', nao, nao, nao, 1.0, X[0], nao, TMP[0], nao, 0.0, C[0], nao);
+      C_DGEMM('n', 't', nao, nao, nao, 1.0, X[0], nao, TMP[0], nao, 0.0, C[0], nao);
       zero_matrix(D, nao, nao);
       for (int i = 0; i < nao; i++)
         for (int j = 0; j < nao; j++)

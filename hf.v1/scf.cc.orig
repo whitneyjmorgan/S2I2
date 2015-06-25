@@ -4,7 +4,6 @@
 // the use of this software is permitted under the conditions GNU General
 // Public License (GPL) version 2
 //
-//C_DGEMM('t', 'n', dim, dim, dim, 1.0, A[0], dim, A[0], dim, 0.0, B[0], dim);
 
 #include <cstdio>
 #include <cstdlib>
@@ -31,7 +30,8 @@ double* read_2e_ints(const char* filename, int nao);
 
 void C_DGEMM(char transa, char transb, int m, int n, int k, double alpha,
 double* a, int lda, double* b, int ldb, double beta, double* c, int ldc);
-int C_DSYEV(char jobz, char uplo, int n, double *a, int lda, double *w, double *work, int lwork);
+int C_DSYEV(char jobz, char uplo, int n, double *a, int lda, double *w,
+double *work, int lwork);
 void C_DAXPY(int n, double a, double *x, int incx, double *y, int incy);
 
 int main(int argc, char *argv[]) {
@@ -103,14 +103,7 @@ int main(int argc, char *argv[]) {
     /* build the symmetric orthogonalizer X = S^(-1/2) */
     evecs = init_matrix(nao, nao);
     evals = init_array(nao);
-  //  diag(nao, nao, S, evals, 1, evecs, 1e-13);
-    int info;
-    info = C_DSYEV('v', 'u', nao, S[0], nao, evals, evecs[0], nao*nao);
-    printf("info = %d\n",info);
-//    memcpy(evecs[0],S[0],nao*nao*sizeof(double));
-    for (int i = 0; i < nao; i++) 
-      for (int j = 0; j < nao; j++) 
-        evecs[j][i] = S[i][j]; 
+    diag(nao, nao, S, evals, 1, evecs, 1e-13);
     for (int i = 0; i < nao; i++) {
       for (int j = 0; j < nao; j++) {
         S[i][j] = 0.0;
@@ -119,11 +112,8 @@ int main(int argc, char *argv[]) {
     }
     TMP = init_matrix(nao, nao);
     X = init_matrix(nao, nao);
-//    mmult(evecs, 0, S, 0, TMP, nao, nao, nao);
-//if you use memcpy you need to make this t, n and the next n, n
-    C_DGEMM('n', 'n', nao, nao, nao, 1.0, evecs[0], nao, S[0], nao, 0.0, TMP[0], nao);
-//    mmult(TMP, 0, evecs, 1, X, nao, nao, nao);
-    C_DGEMM('n', 't', nao, nao, nao, 1.0, TMP[0], nao, evecs[0], nao, 0.0, X[0], nao);
+    mmult(evecs, 0, S, 0, TMP, nao, nao, nao);
+    mmult(TMP, 0, evecs, 1, X, nao, nao, nao);
     delete_matrix(TMP);
     delete[] evals;
     delete_matrix(evecs);
@@ -142,18 +132,15 @@ int main(int argc, char *argv[]) {
 
     TMP = init_matrix(nao, nao);
     Fp = init_matrix(nao, nao);
-//    mmult(X, 0, F, 0, TMP, nao, nao, nao);
-    C_DGEMM('n', 'n', nao, nao, nao, 1.0, X[0], nao, F[0], nao, 0.0, TMP[0], nao);
-//    mmult(TMP, 0, X, 0, Fp, nao, nao, nao);
-    C_DGEMM('n', 'n', nao, nao, nao, 1.0, TMP[0], nao, X[0], nao, 0.0, Fp[0], nao);
+    mmult(X, 0, F, 0, TMP, nao, nao, nao);
+    mmult(TMP, 0, X, 0, Fp, nao, nao, nao);
     printf("\n\tInitial F' Matrix:\n");
     print_mat(Fp, nao, nao, stdout);
 
     eps = init_array(nao);
     diag(nao, nao, Fp, eps, 1, TMP, 1e-13);
     C = init_matrix(nao, nao);
-//    mmult(X, 0, TMP, 0, C, nao, nao, nao);
-    C_DGEMM('n', 'n', nao, nao, nao, 1.0, X[0], nao, TMP[0], nao, 0.0, C[0], nao);
+    mmult(X, 0, TMP, 0, C, nao, nao, nao);
     printf("\n\tInitial C Matrix:\n");
     print_mat(C, nao, nao, stdout);
 
@@ -220,19 +207,16 @@ int main(int argc, char *argv[]) {
       }
 
       zero_matrix(TMP, nao, nao);
-//      mmult(X, 0, F, 0, TMP, nao, nao, nao);
-      C_DGEMM('n', 'n', nao, nao, nao, 1.0, X[0], nao, F[0], nao, 0.0, TMP[0], nao);
+      mmult(X, 0, F, 0, TMP, nao, nao, nao);
       zero_matrix(Fp, nao, nao);
-//      mmult(TMP, 0, X, 0, Fp, nao, nao, nao);
-      C_DGEMM('n', 'n', nao, nao, nao, 1.0, TMP[0], nao, X[0], nao, 0.0, Fp[0], nao);
+      mmult(TMP, 0, X, 0, Fp, nao, nao, nao);
 
       zero_matrix(TMP, nao, nao);
       zero_array(eps, nao);
       diag(nao, nao, Fp, eps, 1, TMP, 1e-13);
 
       zero_matrix(C, nao, nao);
-//      mmult(X, 0, TMP, 0, C, nao, nao, nao);
-      C_DGEMM('n', 'n', nao, nao, nao, 1.0, X[0], nao, TMP[0], nao, 0.0, C[0], nao);
+      mmult(X, 0, TMP, 0, C, nao, nao, nao);
       zero_matrix(D, nao, nao);
       for (int i = 0; i < nao; i++)
         for (int j = 0; j < nao; j++)
